@@ -40,6 +40,16 @@ hist(updateNumberSteps$total_steps,
      col="green",
      breaks = 20)
 
+weekdayOrWeekend<-copy(data_fill)
+weekdayOrWeekend[,day:=weekdays(date)]
+daytype<-c('Saturday','Sunday')
+weekdayOrWeekend[,dayType:=as.factor(ifelse(day %in% daytype, 'weekend','weekday'))]
+weekdayOrWeekend<-weekdayOrWeekend[, list(mean_steps=mean(steps)), by=c('interval','dayType')]
 
-
+p2<-ggplot(weekdayOrWeekend, aes(x=interval, y=mean_steps, color=dayType)) + 
+        geom_line()+
+        xlab("Interval") + 
+        ylab("Mean Number of Steps") +
+        ggtitle("Average Number of Steps by Weekend and Weekday")+
+        facet_grid(dayType ~.)
 
