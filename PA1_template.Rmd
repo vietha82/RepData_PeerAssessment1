@@ -4,22 +4,95 @@ output:
   html_document:
     keep_md: true
 ---
-
+```{r loadData}
+library(data.table)
+library(ggplot2)
+library(dplyr)
+```
 
 ## Loading and preprocessing the data
-
+```{r}
+unzip('activity.zip')
+activity<-data.table(read.csv(file='activity.csv', header = T))
+activity[, date:=as.Date(date, format='%Y-%m-%d')]
+head(activity)
+```
 
 
 ## What is mean total number of steps taken per day?
+```{r}
+TotalNumberOfSteps<-activity[, list(total_steps=sum(steps, na.rm = T)), by='date']
+hist(TotalNumberOfSteps$total_steps, 
+     main="Step Breakdown by Day" ,
+     xlab='Total Number of Steps',
+     col="green",
+     breaks = 20)
 
-
+meanSteps<-mean(TotalNumberOfSteps$total_steps, na.rm = T)
+medianSteps<-median(TotalNumberOfSteps$total_steps, na.rm = T)
+paste('The mean number of steps is', meanSteps)
+paste('The median number of steps is', medianSteps)
+```
 
 ## What is the average daily activity pattern?
+```{r}
+average_steps<-activity[!is.na(steps),list(steps=mean(steps)), by='interval']
+average_steps[ ,steps:=as.numeric(steps)]
+p1<-ggplot(data=average_steps, aes(x=interval, y=steps)) + 
+        geom_line(color='green')+
+        theme_bw()+
+        ggtitle('Mean Steps by Interval')
+print(p1)
 
+max_step<-max(average_steps$steps)
+max_interval<-average_steps[steps==max_step,]
+max_interval<-max_interval$interval
+paste(max_interval, 'is the interval that contains the max number of steps which is', max_step)
+```
 
 
 ## Imputing missing values
+### Empty values in this data set have been replaced by the meanInterval
+```{r}
+empty_row<-nrow(activity[is.na(steps),])
+meanInterval<-mean(activity$steps, na.rm=T)
+data_fill<-activity[, steps:=ifelse(is.na(steps), meanInterval, steps)]
+updateNumberSteps<-data_fill[, list(total_steps=sum(steps, na.rm = T)), by='date']
+updateMeanStep<-mean(updateNumberSteps$total_steps)
+updatemediaStep<-median(updateNumberSteps$total_steps)
 
+hist(updateNumberSteps$total_steps, 
+     main="Step Breakdown by Day" ,
+     xlab='Total Number of Steps',
+     col="green",
+     breaks = 20)
 
+```
+##With the empty values replaced, the updated mean and median values are
+```{r}
+paste(updateMeanStep, 'and', updatemediaStep,'respectively')
+```
+###This is a slight elevation on both values
 
 ## Are there differences in activity patterns between weekdays and weekends?
+```{r}
+weekdayOrWeekend<-copy(data_fill)
+weekdayOrWeekend[,day:=weekdays(date)]
+daytype<-c('Saturday','Sunday')
+weekdayOrWeekend[,dayType:=as.factor(ifelse(day %in% daytype, 'weekend','weekday'))]
+weekdayOrWeekend<-weekdayOrWeekend[, list(mean_steps=mean(steps)), by=c('interval','dayType')]
+
+p2<-ggplot(weekdayOrWeekend, aes(x=interval, y=mean_steps, color=dayType)) + 
+        geom_line()+
+        xlab("Interval") + 
+        ylab("Mean Number of Steps") +
+        ggtitle("Average Number of Steps by Weekend and Weekday")+
+        facet_grid(dayType ~.)
+print(p2)
+```
+
+
+
+
+
+
